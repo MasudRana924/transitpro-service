@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const busRoutes = require('./routes/busRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const authRoutes = require('./routes/authRoutes');
 const cloudinary = require('cloudinary').v2;
 
 cloudinary.config({
@@ -21,6 +22,6 @@ app.use(express.json());
 app.use('/api/buses', busRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// app.use('/api/users', userRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
