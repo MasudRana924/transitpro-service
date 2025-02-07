@@ -4,17 +4,6 @@ const cloudinary = require('cloudinary').v2;
 const { sendEmail } = require('../utils/emailSender');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
-// Register User
-// exports.register = async (req, res) => {
-//     const { name, email, password } = req.body;
-//     try {
-//         const user = await User.create({ name, email, password });
-//         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-//         res.status(201).json({ token, user });
-//     } catch (error) {
-//         res.status(400).json({ message: error.message });
-//     }
-// };
 const transporter = nodemailer.createTransport({
     service: 'Gmail',  // or use other services like SendGrid
     auth: {
@@ -49,9 +38,15 @@ exports.register = async (req, res) => {
             from: process.env.EMAIL_USER,
             to: user.email,
             subject: 'Your OTP for Email Verification',
-            text: `Your OTP is: ${otp}. It will expire in 10 minutes.`,
+            html: `
+                <div style="font-family: Arial, sans-serif; text-align: center;">
+                    <p style="font-size: 18px; font-weight: bold;">Your verification code for <span style="color: #007bff;">TransitPro</span>:</p>
+                    <p style="font-size: 24px; color: red; font-weight: bold;">${otp}</p>
+                    <p style="font-size: 14px; color: #555;">This code will expire in <span style="color:rgb(255, 0, 21);">10</span> minutes.</p>
+                </div>
+            `,
         };
-
+        
         await transporter.sendMail(mailOptions);
 
         // Respond with a message that OTP has been sent
@@ -62,16 +57,12 @@ exports.register = async (req, res) => {
 };
 exports.verifyOtp = async (req, res) => {
     const { email, otp } = req.body;
-
     try {
-        // Find the user by email
         const user = await User.findOne({ email });
 
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
         }
-
-        // Check if OTP matches and is not expired
         if (user.otp !== otp) {
             return res.status(400).json({ message: 'Invalid OTP' });
         }
@@ -79,8 +70,6 @@ exports.verifyOtp = async (req, res) => {
         if (Date.now() > user.otpExpires) {
             return res.status(400).json({ message: 'OTP has expired' });
         }
-
-        // OTP is valid, mark the account as verified
         user.isVerified = true;
         user.otp = undefined;  // Clear OTP after verification
         user.otpExpires = undefined;  // Clear OTP expiration
@@ -91,42 +80,20 @@ exports.verifyOtp = async (req, res) => {
         res.status(400).json({ message: error.message });
     }
 };
-
-// Login User
-// exports.login = async (req, res) => {
-//     const { email, password } = req.body;
-//     try {
-//         const user = await User.findOne({ email });
-//         if (!user || !(await user.matchPassword(password))) {
-//             return res.status(401).json({ message: 'Invalid credentials' });
-//         }
-//         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
-//         res.status(200).json({ token, user });
-//     } catch (error) {
-//         res.status(400).json({ message: error.message });
-//     }
-// };
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Find user by email
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        // Check if the account is verified
         if (!user.isVerified) {
             return res.status(400).json({ message: 'Please verify your account first' });
         }
-
-        // Check if password matches
         if (!(await user.matchPassword(password))) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-
-        // Create a JWT token and send it to the user
         const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
         res.status(200).json({ token, user });
     } catch (error) {
